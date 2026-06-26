@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maplewood Neighborhood – Interactive Map</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="/assets/logo.png" />
+  </head>
+  <body>
+    <header>
+      <div class="logo">🗺️</div>
+      <div>
+        <h1>Maplewood Neighborhood</h1>
+        <p>Interactive Map · English Assignment · UNIMINUTO</p>
+      </div>
+      <div class="badge">Interactive</div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('map')">
+        📍 Map & Places
+      </button>
+      <button class="tab-btn" onclick="switchTab('directions')">
+        🧭 Directions
+      </button>
+      <button class="tab-btn" onclick="switchTab('description')">
+        📝 Description & Audio
+      </button>
+    </div>
+
+    <div class="app">
+      <!-- ═══ LEFT PANEL ═══ -->
+      <div class="panel">
+        <!-- MAP TAB PANEL -->
+        <div id="panel-map" class="tab-page active">
+          <div class="panel-section">
+            <div class="section-title">📌 Places on the Map</div>
+            <div
+              style="
+                font-size: 0.75rem;
+                color: var(--muted);
+                margin-bottom: 10px;
+              "
+            >
+              Click a place to highlight it
+            </div>
+            <div id="place-list"></div>
+          </div>
+          <div class="panel-section">
+            <div class="section-title">🗺️ Streets</div>
+            <div style="font-size: 0.8rem; color: var(--ink); line-height: 1.8">
+              🛣️ <strong>Maple Avenue</strong> — N–S main road<br />
+              🛣️ <strong>Oak Street</strong> — E–W upper road<br />
+              🛣️ <strong>Pine Boulevard</strong> — E–W lower road<br />
+              🛣️ <strong>Elm Lane</strong> — diagonal shortcut<br />
+              🛣️ <strong>River Road</strong> — along the south
+            </div>
+          </div>
+        </div>
+
+        <!-- DIRECTIONS TAB PANEL -->
+        <div id="panel-directions" class="tab-page">
+          <div class="panel-section">
+            <div class="section-title">🧭 5 Routes from Home</div>
+            <div id="directions-list"></div>
+          </div>
+        </div>
+
+        <!-- DESCRIPTION TAB PANEL -->
+        <div id="panel-description" class="tab-page">
+          <div class="panel-section">
+            <div class="section-title">📝 Written Description</div>
+            <div class="desc-block" style="padding: 0">
+              <p>
+                <strong>Maplewood</strong> is a lively and welcoming
+                neighborhood located in the heart of the city. It has everything
+                a resident could need: a <em>supermarket</em> and a
+                <em>pharmacy</em> on Maple Avenue, a beautiful <em>park</em> at
+                the center, and a <em>school</em> just a block north. The
+                neighborhood is arranged around a central square with a
+                fountain, making it easy to find your way around. I particularly
+                like the <em>café</em> on the corner of Oak Street — it is cozy
+                and five minutes on foot from home. Overall, Maplewood feels
+                safe, walkable, and full of life at every corner.
+              </p>
+            </div>
+            <div class="section-title" style="margin-top: 12px">
+              📚 Key Vocabulary
+            </div>
+            <div class="vocab-grid">
+              <div class="vocab-chip">
+                <span>Corner</span>where two streets meet
+              </div>
+              <div class="vocab-chip">
+                <span>Crossing</span>pedestrian crosswalk
+              </div>
+              <div class="vocab-chip">
+                <span>Roundabout</span>circular road junction
+              </div>
+              <div class="vocab-chip"><span>Traffic light</span>semáforo</div>
+              <div class="vocab-chip"><span>Bridge</span>puente peatonal</div>
+              <div class="vocab-chip"><span>Block</span>cuadra</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- END PANEL -->
+
+      <!-- ═══ MAP + AUDIO AREA ═══ -->
+      <div
+        style="flex: 1; display: flex; flex-direction: column; overflow: hidden"
+      >
+        <!-- Audio hint shown only on description tab -->
+        <div id="audio-hint-box" style="display: none">
+          <div class="audio-hint">
+            <strong>🎙️ Audio Script – Route to the Park (max 2 min)</strong>
+            Read this script clearly and record it on your phone or computer:
+            <code>
+              "Hello! Welcome to Maplewood. I will explain how to get to the
+              park from my home. Start at Home, on Maple Avenue. Go straight on
+              Maple Avenue heading north for one block. At the traffic light,
+              turn right onto Oak Street. Walk two blocks east and cross the
+              street at the pedestrian crossing. The park is right in front of
+              you, next to the fountain in the central square. It takes about
+              five minutes on foot. Enjoy the park!"
+            </code>
+          </div>
+        </div>
+
+        <div class="map-area" id="map-area">
+          <!-- SVG MAP injected by JS -->
+        </div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #5bad6f"></div>
+            Park / Green
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #b0b8c1"></div>
+            Roads
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #e8ddd0"></div>
+            Buildings
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #74c0d4"></div>
+            Water
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: #e85d4a"></div>
+            Click to explore
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POPUP -->
+    <div id="popup">
+      <span class="pop-close" onclick="closePopup()">✕</span>
+      <h3 id="pop-title"></h3>
+      <div class="pop-addr" id="pop-addr"></div>
+      <div class="pop-desc" id="pop-desc"></div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+  </body>
+</html>
