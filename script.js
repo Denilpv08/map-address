@@ -1,8 +1,219 @@
 import { places, routes } from "./data.js";
 
-/* ════════════════════════════
-   BUILD PLACE LIST (panel)
-════════════════════════════ */
+const placeAudioFiles = {
+  home: "my-home.mp3",
+  supermarket: "supermarket.mp3",
+  school: "maplewood-school.mp3",
+  park: "central-park.mp3",
+  hospital: "city-hospital.mp3",
+  subway: "subway-station.mp3",
+  cafe: "corner-cafe.mp3",
+  library: "public-library.mp3",
+  pharmacy: "pharmacy.mp3",
+  bank: "national-bank.mp3",
+  store: "fashion-store.mp3",
+};
+
+const routeAudioFiles = [
+  "ruta1.mp3",
+  "ruta2.mp3",
+  "ruta3.mp3",
+  "ruta4.mp3",
+  "ruta5.mp3",
+];
+
+const mainAudioFile = "rutapark.mp3";
+
+/* ════════════════════════════════════════
+   AUDIO STORAGE  (id → HTMLAudioElement)
+════════════════════════════════════════ */
+const audioStore = {};
+
+function audioSourceFor(fileName) {
+  return fileName ? `./audio/${fileName}` : null;
+}
+
+/* ════════════════════════════════════════
+   BUILD AUDIO PLAYER WIDGET
+   Returns an element ready to insert.
+   type: 'route' | 'place' | 'main'
+════════════════════════════════════════ */
+function makeAudioPlayer(id, title, script, audioSrc = null, type = "route") {
+  const wrap = document.createElement("div");
+  let defaultAudio = null;
+  const defaultSourceLabel = audioSrc
+    ? audioSrc.split("/").pop() || title
+    : null;
+
+  // Player row
+  const player = document.createElement("div");
+  player.className = "audio-player" + (type === "place" ? " place-audio" : "");
+
+  const btn = document.createElement("button");
+  btn.className = "play-btn";
+  btn.innerHTML = "▶";
+  btn.title = "Play / Pause";
+
+  const info = document.createElement("div");
+  info.className = "audio-info";
+
+  const lbl = document.createElement("div");
+  lbl.className = "audio-label";
+  lbl.textContent =
+    type === "place"
+      ? "🔊 Place audio"
+      : type === "main"
+        ? "🎙️ Main recording"
+        : "🔊 Route audio";
+
+  const ttl = document.createElement("div");
+  ttl.className = "audio-title";
+  ttl.textContent = title;
+
+  const status = document.createElement("div");
+  status.className = "audio-status";
+  status.textContent = "No audio loaded — upload your recording";
+
+  const progWrap = document.createElement("div");
+  progWrap.className = "progress-wrap";
+  const progBar = document.createElement("div");
+  progBar.className = "progress-bar";
+  progWrap.appendChild(progBar);
+
+  info.appendChild(lbl);
+  info.appendChild(ttl);
+  info.appendChild(status);
+  info.appendChild(progWrap);
+
+  progWrap.addEventListener("click", (e) => {
+    const audio = audioStore[id];
+    if (!audio || !audio.duration) return;
+    const rect2 = progWrap.getBoundingClientRect();
+    const pct = (e.clientX - rect2.left) / rect2.width;
+    audio.currentTime = pct * audio.duration;
+  });
+
+  btn.addEventListener("click", () => {
+    const audio = audioStore[id] || (audioSrc ? loadDefaultAudio(false) : null);
+    if (!audio) return;
+    if (audio.paused) {
+      // Pause all others
+      Object.entries(audioStore).forEach(([k, a]) => {
+        if (k !== id && !a.paused) {
+          a.pause();
+        }
+      });
+      document.querySelectorAll(".play-btn").forEach((b) => {
+        b.innerHTML = "▶";
+        b.classList.remove("playing");
+      });
+      audio.play();
+      btn.innerHTML = "⏸";
+      btn.classList.add("playing");
+    } else {
+      audio.pause();
+      btn.innerHTML = "▶";
+      btn.classList.remove("playing");
+    }
+  });
+
+  player.appendChild(btn);
+  player.appendChild(info);
+  wrap.appendChild(player);
+
+  function loadDefaultAudio(shouldAutoPlay = false) {
+    if (!audioSrc) return null;
+    if (!defaultAudio) {
+      defaultAudio = new Audio();
+      defaultAudio.preload = "metadata";
+      defaultAudio.src = audioSrc;
+      attachAudio(defaultAudio, defaultSourceLabel, shouldAutoPlay);
+    } else if (shouldAutoPlay) {
+      defaultAudio.play();
+    }
+    return defaultAudio;
+  }
+
+  function attachAudio(audio, sourceLabel, shouldAutoPlay = false) {
+    audioStore[id] = audio;
+    audio.preload = "auto";
+
+    status.textContent =
+      sourceLabel.length > 22 ? sourceLabel.slice(0, 20) + "…" : sourceLabel;
+    progBar.style.width = "0%";
+
+    audio.addEventListener("timeupdate", () => {
+      if (audio.duration) {
+        progBar.style.width = (audio.currentTime / audio.duration) * 100 + "%";
+      }
+      const cur = fmtTime(audio.currentTime);
+      const dur = fmtTime(audio.duration);
+      status.textContent = `${cur} / ${dur}`;
+    });
+    audio.addEventListener("ended", () => {
+      btn.innerHTML = "▶";
+      btn.classList.remove("playing");
+      progBar.style.width = "0%";
+    });
+    audio.addEventListener("play", () => {
+      btn.innerHTML = "⏸";
+      btn.classList.add("playing");
+    });
+    audio.addEventListener("pause", () => {
+      btn.innerHTML = "▶";
+      btn.classList.remove("playing");
+    });
+    audio.addEventListener("error", () => {
+      status.textContent = "Default audio could not load";
+      delete audioStore[id];
+      if (audio === defaultAudio) {
+        defaultAudio = null;
+      }
+    });
+
+    if (shouldAutoPlay) {
+      audio.play();
+    }
+  }
+
+  if (audioSrc) {
+    status.textContent = defaultSourceLabel || "Audio ready";
+  }
+
+  // Script hint (collapsible)
+  if (script) {
+    const scriptToggle = document.createElement("div");
+    scriptToggle.style.cssText =
+      "font-size:.68rem;color:var(--muted);cursor:pointer;margin-top:5px;padding:2px 0;user-select:none;";
+    scriptToggle.textContent = "📄 View script to record ▾";
+    const scriptBox = document.createElement("div");
+    scriptBox.style.cssText =
+      'display:none;background:#f0f4f8;border-radius:6px;padding:8px 10px;font-size:.73rem;line-height:1.7;color:var(--ink);margin-top:4px;font-family:"DM Mono",monospace;border-left:3px solid var(--gold);white-space:pre-wrap;';
+    scriptBox.textContent = script;
+    scriptToggle.addEventListener("click", () => {
+      const open = scriptBox.style.display !== "none";
+      scriptBox.style.display = open ? "none" : "block";
+      scriptToggle.textContent = open
+        ? "📄 View script to record ▾"
+        : "📄 Hide script ▴";
+    });
+    wrap.appendChild(scriptToggle);
+    wrap.appendChild(scriptBox);
+  }
+
+  return wrap;
+}
+
+function fmtTime(s) {
+  if (!s || isNaN(s)) return "0:00";
+  const m = Math.floor(s / 60),
+    sec = Math.floor(s % 60);
+  return m + ":" + (sec < 10 ? "0" : "") + sec;
+}
+
+/* ════════════════════════════════════════
+   BUILD PLACE LIST
+════════════════════════════════════════ */
 function buildPlaceList() {
   const el = document.getElementById("place-list");
   places.forEach((p) => {
@@ -16,24 +227,58 @@ function buildPlaceList() {
   });
 }
 
-/* ════════════════════════════
-   BUILD DIRECTIONS (panel)
-════════════════════════════ */
+/* ════════════════════════════════════════
+   BUILD DIRECTIONS
+════════════════════════════════════════ */
 function buildDirections() {
   const el = document.getElementById("directions-list");
-  routes.forEach((r) => {
+  routes.forEach((r, index) => {
     const card = document.createElement("div");
     card.className = "route-card";
-    card.innerHTML =
-      `<h4>${r.emoji} ${r.from} → ${r.to}</h4>` +
-      r.steps.map((s) => `<div class="route-step">${s}</div>`).join("");
+
+    const h4 = document.createElement("h4");
+    h4.innerHTML = `${r.emoji} ${r.from} → ${r.to}`;
+    card.appendChild(h4);
+
+    r.steps.forEach((s) => {
+      const step = document.createElement("div");
+      step.className = "route-step";
+      step.innerHTML = s;
+      card.appendChild(step);
+    });
+
+    // Audio player for this route
+    const playerEl = makeAudioPlayer(
+      r.id,
+      `${r.from} → ${r.to}`,
+      r.audioScript,
+      audioSourceFor(routeAudioFiles[index]),
+      "route",
+    );
+    card.appendChild(playerEl);
+
     el.appendChild(card);
   });
 }
 
-/* ════════════════════════════
+/* ════════════════════════════════════════
+   BUILD MAIN AUDIO (description tab)
+════════════════════════════════════════ */
+function buildMainAudio() {
+  const container = document.getElementById("main-audio-player");
+  const playerEl = makeAudioPlayer(
+    "main-neighborhood",
+    "Route to Central Park — required recording",
+    null,
+    audioSourceFor(mainAudioFile),
+    "main",
+  );
+  container.appendChild(playerEl);
+}
+
+/* ════════════════════════════════════════
    BUILD SVG MAP
-════════════════════════════ */
+════════════════════════════════════════ */
 function buildMap() {
   const W = 640,
     H = 600;
@@ -42,48 +287,33 @@ function buildMap() {
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.setAttribute("width", W);
   svg.setAttribute("height", H);
-  svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
 
-  // Background (grass/ground)
   rect(svg, 0, 0, W, H, "#C8DFA0");
-
-  // River / water strip at bottom
   rect(svg, 0, 540, W, 60, "#74C0D4");
-  text(svg, 320, 570, "〰️ River Road", "#fff", 11, "middle");
+  svgText(svg, 320, 570, "〰️ River Road", "#fff", 11, "middle");
 
-  // Park (big green block)
   rect(svg, 320, 220, 160, 120, "#5BAD6F", 8);
-  // Park inner details
-  circle(svg, 400, 270, 18, "#74C0D4"); // fountain
-  text(svg, 400, 272, "⛲", null, 16, "middle");
-  // Trees
+  circle(svg, 400, 270, 18, "#74C0D4");
+  svgText(svg, 400, 272, "⛲", null, 16, "middle");
   ["340,230", "460,230", "340,310", "460,310", "400,230"].forEach((pos) => {
     const [x, y] = pos.split(",");
-    text(svg, +x, +y, "🌲", null, 13, "middle");
+    svgText(svg, +x, +y, "🌲", null, 13, "middle");
   });
-  text(svg, 400, 300, "Central Park", "#1a5e2e", 10, "middle");
+  svgText(svg, 400, 300, "Central Park", "#1a5e2e", 10, "middle");
 
-  // Roads (thick gray)
-  // Maple Ave vertical
   roadV(svg, 170, 0, H, "Maple Avenue", true);
-  // Oak Street horizontal
   roadH(svg, 0, 220, W, "Oak Street", true);
-  // Pine Boulevard horizontal
   roadH(svg, 0, 450, W, "Pine Blvd", true);
-  // Elm Lane diagonal
-  line(svg, 170, 220, 320, 450, "#B0B8C1", 22);
-  text(svg, 235, 342, "Elm Lane", "#fff", 9, "middle");
+  svgLine(svg, 170, 220, 320, 450, "#B0B8C1", 22);
+  svgText(svg, 235, 342, "Elm Lane", "#fff", 9, "middle");
 
-  // Sidewalks / crosswalks
-  crosswalk(svg, 155, 218, 32, 4); // Oak & Maple intersection
-  crosswalk(svg, 155, 448, 32, 4);
+  crosswalk(svg, 155, 218, 4);
+  crosswalk(svg, 155, 448, 4);
 
-  // Traffic lights at main intersections
   trafficLight(svg, 155, 215);
   trafficLight(svg, 155, 445);
   trafficLight(svg, 322, 215);
 
-  // Draw all places as clickable
   places.forEach((p) => {
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     g.setAttribute("class", "place-clickable");
@@ -93,12 +323,8 @@ function buildMap() {
       showPopupById(p.id, e);
     });
 
-    if (p.id === "park") {
-      // park already drawn, just make whole park clickable — skip visual duplicate
-      return;
-    }
+    if (p.id === "park") return;
 
-    // Building rect
     const bx = p.cx - p.w / 2,
       by = p.cy - p.h / 2;
     const r2 = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -112,7 +338,6 @@ function buildMap() {
     r2.setAttribute("stroke-width", 2);
     g.appendChild(r2);
 
-    // Icon
     const t1 = document.createElementNS("http://www.w3.org/2000/svg", "text");
     t1.setAttribute("x", p.cx);
     t1.setAttribute("y", p.cy - 4);
@@ -122,7 +347,6 @@ function buildMap() {
     t1.textContent = p.icon;
     g.appendChild(t1);
 
-    // Label
     const t2 = document.createElementNS("http://www.w3.org/2000/svg", "text");
     t2.setAttribute("x", p.cx);
     t2.setAttribute("y", p.cy + p.h / 2 + 11);
@@ -137,7 +361,7 @@ function buildMap() {
     svg.appendChild(g);
   });
 
-  // Make park clickable overlay
+  // Park clickable overlay
   const pg = document.createElementNS("http://www.w3.org/2000/svg", "g");
   pg.setAttribute("class", "place-clickable");
   pg.addEventListener("click", (e) => {
@@ -154,19 +378,16 @@ function buildMap() {
   pg.appendChild(po);
   svg.appendChild(pg);
 
-  // Compass rose
   compass(svg, W - 62, 62, 48);
-
-  // Home label arrow
   arrLabel(svg, 210, 320, "🏠 HOME");
 
   document.getElementById("map-area").appendChild(svg);
 }
 
-/* ════════════════════════════
+/* ════════════════════════════════════════
    SVG HELPERS
-════════════════════════════ */
-function rect(parent, x, y, w, h, fill, rx = 0) {
+════════════════════════════════════════ */
+function rect(p, x, y, w, h, fill, rx = 0) {
   const el = document.createElementNS("http://www.w3.org/2000/svg", "rect");
   el.setAttribute("x", x);
   el.setAttribute("y", y);
@@ -174,19 +395,19 @@ function rect(parent, x, y, w, h, fill, rx = 0) {
   el.setAttribute("height", h);
   el.setAttribute("fill", fill);
   if (rx) el.setAttribute("rx", rx);
-  parent.appendChild(el);
+  p.appendChild(el);
   return el;
 }
-function circle(parent, cx, cy, r, fill) {
+function circle(p, cx, cy, r, fill) {
   const el = document.createElementNS("http://www.w3.org/2000/svg", "circle");
   el.setAttribute("cx", cx);
   el.setAttribute("cy", cy);
   el.setAttribute("r", r);
   el.setAttribute("fill", fill);
-  parent.appendChild(el);
+  p.appendChild(el);
   return el;
 }
-function text(parent, x, y, txt, fill, size = 12, anchor = "start") {
+function svgText(p, x, y, txt, fill, size = 12, anchor = "start") {
   const el = document.createElementNS("http://www.w3.org/2000/svg", "text");
   el.setAttribute("x", x);
   el.setAttribute("y", y);
@@ -195,10 +416,10 @@ function text(parent, x, y, txt, fill, size = 12, anchor = "start") {
   el.setAttribute("font-family", "DM Sans,sans-serif");
   if (fill) el.setAttribute("fill", fill);
   el.textContent = txt;
-  parent.appendChild(el);
+  p.appendChild(el);
   return el;
 }
-function line(parent, x1, y1, x2, y2, stroke, sw = 2) {
+function svgLine(p, x1, y1, x2, y2, stroke, sw = 2) {
   const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
   el.setAttribute("x1", x1);
   el.setAttribute("y1", y1);
@@ -206,11 +427,11 @@ function line(parent, x1, y1, x2, y2, stroke, sw = 2) {
   el.setAttribute("y2", y2);
   el.setAttribute("stroke", stroke);
   el.setAttribute("stroke-width", sw);
-  parent.appendChild(el);
+  p.appendChild(el);
   return el;
 }
-function roadV(parent, x, y0, y1, label, dashed) {
-  rect(parent, x - 18, y0, 36, y1, "#B0B8C1");
+function roadV(p, x, y0, y1, label, dashed) {
+  rect(p, x - 18, y0, 36, y1, "#B0B8C1");
   if (dashed) {
     const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
     el.setAttribute("x1", x);
@@ -220,13 +441,13 @@ function roadV(parent, x, y0, y1, label, dashed) {
     el.setAttribute("stroke", "#F5F0E8");
     el.setAttribute("stroke-width", 2);
     el.setAttribute("stroke-dasharray", "14 8");
-    parent.appendChild(el);
+    p.appendChild(el);
   }
-  const t = text(parent, x + 24, y0 + 90, label, "#6B7280", 8.5, "start");
+  const t = svgText(p, x + 24, y0 + 90, label, "#6B7280", 8.5, "start");
   t.setAttribute("transform", `rotate(90,${x + 24},${y0 + 90})`);
 }
-function roadH(parent, x0, y, x1, label, dashed) {
-  rect(parent, x0, y - 18, x1, 36, "#B0B8C1");
+function roadH(p, x0, y, x1, label, dashed) {
+  rect(p, x0, y - 18, x1, 36, "#B0B8C1");
   if (dashed) {
     const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
     el.setAttribute("x1", x0);
@@ -236,29 +457,26 @@ function roadH(parent, x0, y, x1, label, dashed) {
     el.setAttribute("stroke", "#F5F0E8");
     el.setAttribute("stroke-width", 2);
     el.setAttribute("stroke-dasharray", "14 8");
-    parent.appendChild(el);
+    p.appendChild(el);
   }
-  text(parent, x0 + 12, y + 28, label, "#6B7280", 8.5, "start");
+  svgText(p, x0 + 12, y + 28, label, "#6B7280", 8.5, "start");
 }
-function crosswalk(parent, x, y, w, stripes) {
+function crosswalk(p, x, y, stripes) {
   for (let i = 0; i < stripes; i++) {
-    const sw = 6,
-      gap = 3;
-    rect(parent, x + i * (sw + gap), y, sw, 18, "rgba(255,255,255,.6)");
+    rect(p, x + i * 9, y, 6, 18, "rgba(255,255,255,.6)");
   }
 }
-function trafficLight(parent, x, y) {
+function trafficLight(p, x, y) {
   const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
   rect(g, x - 5, y - 14, 10, 22, "#2D3748", 2);
   circle(g, x, y - 8, 3, "#E85D4A");
   circle(g, x, y, 3, "#F4A32A");
   circle(g, x, y + 8, 3, "#5BAD6F");
-  parent.appendChild(g);
+  p.appendChild(g);
 }
-function compass(parent, cx, cy, size) {
+function compass(p, cx, cy, size) {
   const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
   circle(g, cx, cy, size / 2, "rgba(255,255,255,.88)");
-  // N arrow
   const arrowN = document.createElementNS(
     "http://www.w3.org/2000/svg",
     "polygon",
@@ -269,7 +487,6 @@ function compass(parent, cx, cy, size) {
   );
   arrowN.setAttribute("fill", "#E85D4A");
   g.appendChild(arrowN);
-  // S arrow
   const arrowS = document.createElementNS(
     "http://www.w3.org/2000/svg",
     "polygon",
@@ -280,20 +497,19 @@ function compass(parent, cx, cy, size) {
   );
   arrowS.setAttribute("fill", "#B0B8C1");
   g.appendChild(arrowS);
-  // Labels
   [
     ["N", cx, cy - size * 0.42 - 6, "#E85D4A"],
     ["S", cx, cy + size * 0.42 + 10, "#6B7280"],
     ["W", cx - size * 0.42 - 2, cy + 4, "#6B7280"],
     ["E", cx + size * 0.42 + 2, cy + 4, "#6B7280"],
   ].forEach(([l, x, y, c]) => {
-    const t = text(g, x, y, l, c, 9, "middle");
+    const t = svgText(g, x, y, l, c, 9, "middle");
     t.setAttribute("font-weight", "700");
   });
   circle(g, cx, cy, 4, "#2D3748");
-  parent.appendChild(g);
+  p.appendChild(g);
 }
-function arrLabel(parent, cx, cy, label) {
+function arrLabel(p, cx, cy, label) {
   const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
   const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
   bg.setAttribute("x", cx - 36);
@@ -303,21 +519,18 @@ function arrLabel(parent, cx, cy, label) {
   bg.setAttribute("rx", 4);
   bg.setAttribute("fill", "#F4A32A");
   g.appendChild(bg);
-  const t = text(g, cx, cy - 13, label, "#fff", 8, "middle");
+  const t = svgText(g, cx, cy - 13, label, "#fff", 8, "middle");
   t.setAttribute("font-weight", "700");
-  parent.appendChild(g);
+  p.appendChild(g);
 }
 function lighten(hex) {
   const n = parseInt(hex.slice(1), 16);
-  const r = Math.min(255, ((n >> 16) & 0xff) + 80);
-  const gv = Math.min(255, ((n >> 8) & 0xff) + 80);
-  const b = Math.min(255, (n & 0xff) + 80);
-  return `rgb(${r},${gv},${b})`;
+  return `rgb(${Math.min(255, ((n >> 16) & 0xff) + 80)},${Math.min(255, ((n >> 8) & 0xff) + 80)},${Math.min(255, (n & 0xff) + 80)})`;
 }
 
-/* ════════════════════════════
-   POPUP
-════════════════════════════ */
+/* ════════════════════════════════════════
+   POPUP  (with place audio player)
+════════════════════════════════════════ */
 function showPopupById(id, event) {
   const p = places.find((x) => x.id === id);
   if (!p) return;
@@ -327,18 +540,30 @@ function showPopupById(id, event) {
   const li = document.getElementById("li-" + id);
   if (li) li.classList.add("selected");
 
-  const popup = document.getElementById("popup");
   document.getElementById("pop-title").textContent = p.icon + " " + p.name;
   document.getElementById("pop-addr").textContent = "📍 " + p.addr;
   document.getElementById("pop-desc").textContent = p.desc;
-  popup.style.display = "block";
-  popup.style.pointerEvents = "all";
 
+  // Rebuild audio player in popup (one per place)
+  const audioContainer = document.getElementById("pop-audio");
+  audioContainer.innerHTML = "";
+  const playerEl = makeAudioPlayer(
+    "place-" + p.id,
+    p.name,
+    p.audioScript,
+    audioSourceFor(placeAudioFiles[p.id]),
+    "place",
+  );
+  audioContainer.appendChild(playerEl);
+
+  const popup = document.getElementById("popup");
+  popup.style.display = "block";
   if (event) {
-    const x = Math.min(event.clientX + 12, window.innerWidth - 260);
-    const y = Math.min(event.clientY - 20, window.innerHeight - 180);
+    const x = Math.min(event.clientX + 14, window.innerWidth - 275);
+    const y = Math.min(event.clientY - 20, window.innerHeight - 280);
     popup.style.left = x + "px";
     popup.style.top = y + "px";
+    popup.style.transform = "none";
   } else {
     popup.style.left = "50%";
     popup.style.top = "30%";
@@ -351,34 +576,40 @@ function closePopup() {
     .querySelectorAll(".place-item")
     .forEach((el) => el.classList.remove("selected"));
 }
+
+window.closePopup = closePopup;
 document.addEventListener("click", (e) => {
   const popup = document.getElementById("popup");
   if (popup.style.display === "block" && !popup.contains(e.target))
     closePopup();
 });
 
-/* ════════════════════════════
+/* ════════════════════════════════════════
    TABS
-════════════════════════════ */
+════════════════════════════════════════ */
 function switchTab(tab) {
   document.querySelectorAll(".tab-btn").forEach((b, i) => {
-    const tabs = ["map", "directions", "description"];
-    b.classList.toggle("active", tabs[i] === tab);
+    b.classList.toggle(
+      "active",
+      ["map", "directions", "description"][i] === tab,
+    );
   });
   document
     .querySelectorAll(".tab-page")
     .forEach((p) => p.classList.remove("active"));
   document.getElementById("panel-" + tab).classList.add("active");
-  document.getElementById("audio-hint-box").style.display =
+  document.getElementById("neighborhood-audio-area").style.display =
     tab === "description" ? "block" : "none";
+  document.getElementById("map-area").style.display =
+    tab === "description" ? "none" : "flex";
 }
 
 window.switchTab = switchTab;
-window.closePopup = closePopup;
 
-/* ════════════════════════════
+/* ════════════════════════════════════════
    INIT
-════════════════════════════ */
+════════════════════════════════════════ */
 buildPlaceList();
 buildDirections();
+buildMainAudio();
 buildMap();

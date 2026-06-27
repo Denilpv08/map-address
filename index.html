@@ -19,37 +19,28 @@
 
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('map')">
-        📍 Map & Places
+        📍 Map &amp; Places
       </button>
       <button class="tab-btn" onclick="switchTab('directions')">
         🧭 Directions
       </button>
       <button class="tab-btn" onclick="switchTab('description')">
-        📝 Description & Audio
+        📝 Description &amp; Audio
       </button>
     </div>
 
     <div class="app">
       <!-- ═══ LEFT PANEL ═══ -->
       <div class="panel">
-        <!-- MAP TAB PANEL -->
+        <!-- MAP TAB -->
         <div id="panel-map" class="tab-page active">
           <div class="panel-section">
-            <div class="section-title">📌 Places on the Map</div>
-            <div
-              style="
-                font-size: 0.75rem;
-                color: var(--muted);
-                margin-bottom: 10px;
-              "
-            >
-              Click a place to highlight it
-            </div>
+            <div class="section-title">📌 Places — click to explore</div>
             <div id="place-list"></div>
           </div>
           <div class="panel-section">
-            <div class="section-title">🗺️ Streets</div>
-            <div style="font-size: 0.8rem; color: var(--ink); line-height: 1.8">
+            <div class="section-title">🛣️ Streets</div>
+            <div style="font-size: 0.8rem; color: var(--ink); line-height: 1.9">
               🛣️ <strong>Maple Avenue</strong> — N–S main road<br />
               🛣️ <strong>Oak Street</strong> — E–W upper road<br />
               🛣️ <strong>Pine Boulevard</strong> — E–W lower road<br />
@@ -59,20 +50,27 @@
           </div>
         </div>
 
-        <!-- DIRECTIONS TAB PANEL -->
+        <!-- DIRECTIONS TAB -->
         <div id="panel-directions" class="tab-page">
           <div class="panel-section">
             <div class="section-title">🧭 5 Routes from Home</div>
+            <div class="guide-box">
+              <strong>🎙️ Route audio ready:</strong>
+              Each route already loads its matching file from the <em>audio</em>
+              folder. You can press play right away.
+            </div>
             <div id="directions-list"></div>
           </div>
         </div>
 
-        <!-- DESCRIPTION TAB PANEL -->
+        <!-- DESCRIPTION TAB -->
         <div id="panel-description" class="tab-page">
           <div class="panel-section">
             <div class="section-title">📝 Written Description</div>
-            <div class="desc-block" style="padding: 0">
-              <p>
+            <div style="padding: 0 0 4px">
+              <p
+                style="font-size: 0.85rem; line-height: 1.75; color: var(--ink)"
+              >
                 <strong>Maplewood</strong> is a lively and welcoming
                 neighborhood located in the heart of the city. It has everything
                 a resident could need: a <em>supermarket</em> and a
@@ -85,7 +83,7 @@
                 safe, walkable, and full of life at every corner.
               </p>
             </div>
-            <div class="section-title" style="margin-top: 12px">
+            <div class="section-title" style="margin-top: 4px">
               📚 Key Vocabulary
             </div>
             <div class="vocab-grid">
@@ -107,35 +105,40 @@
       </div>
       <!-- END PANEL -->
 
-      <!-- ═══ MAP + AUDIO AREA ═══ -->
+      <!-- ═══ RIGHT AREA (map + description audio) ═══ -->
       <div
         style="flex: 1; display: flex; flex-direction: column; overflow: hidden"
       >
-        <!-- Audio hint shown only on description tab -->
-        <div id="audio-hint-box" style="display: none">
-          <div class="audio-hint">
-            <strong>🎙️ Audio Script – Route to the Park (max 2 min)</strong>
-            Read this script clearly and record it on your phone or computer:
-            <code>
+        <!-- Neighborhood audio block (description tab only) -->
+        <div id="neighborhood-audio-area" style="display: none">
+          <div class="neighborhood-audio-block">
+            <strong>🎙️ Required Audio — Description &amp; Audio</strong>
+            <p>
+              The description audio is already linked from the <em>audio</em>
+              folder. Play it here.
+            </p>
+            <div class="script-box">
               "Hello! Welcome to Maplewood. I will explain how to get to the
-              park from my home. Start at Home, on Maple Avenue. Go straight on
-              Maple Avenue heading north for one block. At the traffic light,
-              turn right onto Oak Street. Walk two blocks east and cross the
-              street at the pedestrian crossing. The park is right in front of
-              you, next to the fountain in the central square. It takes about
-              five minutes on foot. Enjoy the park!"
-            </code>
+              park from my home.<br />
+              Start at Home, on Maple Avenue. Go straight on Maple Avenue
+              heading north for one block.<br />
+              At the traffic light, turn right onto Oak Street. Walk two blocks
+              east and cross the street<br />
+              at the pedestrian crossing. The park is right in front of you,
+              next to the fountain<br />
+              in the central square. It takes about five minutes on foot. Enjoy
+              the park!"
+            </div>
+            <div id="main-audio-player"></div>
           </div>
         </div>
 
-        <div class="map-area" id="map-area">
-          <!-- SVG MAP injected by JS -->
-        </div>
+        <div class="map-area" id="map-area"></div>
 
         <div class="legend">
           <div class="legend-item">
             <div class="legend-dot" style="background: #5bad6f"></div>
-            Park / Green
+            Park
           </div>
           <div class="legend-item">
             <div class="legend-dot" style="background: #b0b8c1"></div>
@@ -151,7 +154,7 @@
           </div>
           <div class="legend-item">
             <div class="legend-dot" style="background: #e85d4a"></div>
-            Click to explore
+            Click places
           </div>
         </div>
       </div>
@@ -159,10 +162,11 @@
 
     <!-- POPUP -->
     <div id="popup">
-      <span class="pop-close" onclick="closePopup()">✕</span>
+      <button class="pop-close" onclick="closePopup()">✕</button>
       <h3 id="pop-title"></h3>
       <div class="pop-addr" id="pop-addr"></div>
       <div class="pop-desc" id="pop-desc"></div>
+      <div id="pop-audio"></div>
     </div>
 
     <script type="module" src="script.js"></script>
